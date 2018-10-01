@@ -10,6 +10,9 @@ Grow a brain is a generative simulation of randomly generated cells that interac
 - Other cells are repulsed if too close (REP=repulsion)
 - All cells move outwards from the center
 
+### Examples
+
+![](img/brain01.png?raw=true "Brain01")
  
 ### License
 
