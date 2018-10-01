@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<!-- Use Google Fonts API-->
+<link href="https://fonts.googleapis.com/css?family=Pacifico|Permanent|Raleway" rel="stylesheet">
+<!-- Load the Paper.js library -->
+<script type="text/javascript" src="paper-full.min.js"></script>
+
+<!-- jQuery -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+<script src='spectrum.js'></script>
+	 <link rel='stylesheet' href='spectrum.css' />
+
+<script type="text/javascript">
+  var paused = false;
+	var expansion = .1; // expansion from center
+	var repulsion = 1.0;
+	var attraction = 1.5;
+	var preferred_distance = 4;
+	var repulsion_distance = 15;
+
+	var hemispehric_distance = 5;
+
+
+	var done=false;
+
+	var resetRequest=true;
+
+function pause() {
+	paused=!paused;
+}
+
+function res() {
+	resetRequest=true;
+}
+
+
+function slider(myValue) {
+	//console.log("Click!"+myValue+" OK");
+//	repulsion = myValue;
+	attraction = myValue/50.0;
+	console.log("Attract"+attraction);
+}
+
+function sliderDist(myValue) {
+	console.log(myValue);
+	preferred_distance = myValue;
+}
+
+function sliderHemi(myValue) {
+	console.log(myValue);
+	repulsion_distance= myValue;
+}
+
+
+var col="black";
+var fillcol='#ff0000';
+
+function setcol(myValue) {
+	fillcol= 	"#"+$("#colorpicker").spectrum("get").toHex();
+	console.log(fillcol);
+//myValue;
+}
+</script>
+
+<!-- Define inlined PaperScript associate it with myCanvas -->
+<script type="text/paperscript" canvas="myCanvas">
+
+// Create a Paper.js Path to draw a line into it:
+
+var path = new Path();
+var mirror_path = new Path();
+
+ var mirror_x = 150;
+ var mirror = true;
+
+//mirror_path.add(new Point(30, 60));
+//mirror_path.lineTo(40,140);
+// }
+
+	var x = 10;
+
+  var height = 200;
+
+	var count=0;
+
+ console.log(paper.view);
+ //paper.view.pixelRatio=15;
+ paper.view.zoom=.3;
+
+ function reset() {
+
+	 count=0;
+
+	 done = false;
+	 paused = false;
+
+	 path.remove();
+	 mirror_path.remove();
+
+	 path = new Path();
+	 mirror_path = new Path();
+
+ 	// Give the stroke a color
+
+ 	var start = new Point(100, 60);
+ 	// Move to start and draw a line from there
+ 	path.moveTo(start);
+ 	// Note the plus operator on Point objects.
+ 	// PaperScript does that for us, and much more!
+ 	path.lineTo(start + [ 100, -50 ]);
+ 	path.lineTo(start + [ 20,70]);
+ 	path.lineTo(start + [ 10,100]);
+ 	path.closed = true;
+
+ 	mirror_path.fillColor = path.fillColor;
+
+
+
+ 	mirror_path.closed = true;
+ 	// if (mirror) {
+ 		 for (var i=0; i < path.segments.length;i++) {
+ 			 var temp = path.segments[i].point
+
+ 			 //temp = (mirror_x - temp.x) + mirror_x;
+ 			 mirror_path.add(new Point(temp.x+50, temp.y));
+ 		 }
+
+
+ }
+
+	function onFrame(event) {
+
+		if (done || paused) return;
+
+		if (resetRequest) {
+			resetRequest = false;
+			reset();
+		}
+
+		path.strokeColor = col;
+	  mirror_path.strokeColor=col;
+
+		   path.fillColor = fillcol;
+		mirror_path.fillColor = fillcol;
+
+		var centerx = 50;
+		var centery = 50;
+
+		if (count < 400) {
+
+		//path.lineTo(x,10);
+		x = x + 10;
+
+	//path.add( new Point(30, 40) + Point.random()*40);
+
+	for (var i=0; i < path.segments.length;i++) {
+
+		var p = path.segments[i].point;
+
+		//
+		// Step #1 - grow inwards/outwards
+		//
+		var delta_x = p.x-centerx;
+		var delta_y = p.y-centery;
+		var rad = Math.atan2(delta_y, delta_x);
+
+		var dx = Math.cos(rad)*expansion;
+		var dy = Math.sin(rad)*expansion;
+
+		p.x+=dx;
+		p.y+=dy;
+
+		// stay close to neighbors
+		var impetus_x=0;
+		var impetus_y=0;
+
+		var neighbors = [i-1,i+1];
+		for (var j=0; j<neighbors.length;j++) {
+			neighbors[j] = neighbors[j]%path.segments.length;
+			if (neighbors[j]<0) neighbors[j]+=path.segments.length;
+
+		var neighbor = path.segments[neighbors[j]].point;
+		delta_x = neighbor.x - p.x;
+		delta_y = neighbor.y - p.y;
+		var rad = Math.atan2(delta_y, delta_x);
+		dx = Math.cos(rad);
+		dy = Math.sin(rad);
+		var distance = Math.sqrt(delta_x*delta_x+delta_y*delta_y);
+		if (distance > preferred_distance) {
+			impetus_x += dx;
+			impetus_y += dy;
+		} else {
+			impetus_x -= dx;
+			impetus_y -= dy;
+		}
+	 }
+
+	 p.x += impetus_x*attraction;
+	 p.y += impetus_y*attraction;
+		// stay away from others
+		impetus_x=0;
+		impetus_y=0;
+		for (var j=0; j<path.segments.length; j++)
+		{
+			if (i==j) continue;
+			var p2 = path.segments[j].point;
+
+			delta_x=p2.x-p.x;
+			delta_y=p2.y-p.y;
+			distance = Math.sqrt(delta_x*delta_x+delta_y*delta_y);
+			if (distance < repulsion_distance) {
+				rad = Math.atan2(delta_y, delta_x);
+				dx = Math.cos(rad)*repulsion;
+				dy = Math.sin(rad)*repulsion;
+				impetus_x-=dx;
+				impetus_y-=dy;
+			}
+		}
+
+		p.x += impetus_x;
+		p.y += impetus_y;
+
+		// spawn new segments
+		if (Math.random() < 0.02*(80/path.segments.length))
+		{
+			var index = (i+1) % path.segments.length;
+			//var index = 1;
+			var p2 = path.segments[index].point;
+			var x = (p.x + p2.x)/2;
+			var y = (p.y + p2.y)/2;
+			var pnew = new Point(x,y);
+			path.insert(i+1, pnew);
+			mirror_path.insert(i+1, new Point(x,y));
+		}
+
+		// repulse from bottom
+	/*	if (p.y >= height || p.y <= 0) {
+			done=true;
+		}*/
+	/*	if (p.y < 0) {
+			p.y += 4;
+		}
+		if (p.x < 0) {
+			p.x += 4;
+		}
+*/
+	 if (p.x > (mirror_x-hemispehric_distance)) {
+		 p.x = mirror_x-hemispehric_distance-Math.random()*15;
+	 }
+
+		//path.segments[i].point.x+=0.1;
+		//p.x+=1;
+	}
+
+ // update mirror Path
+ for (var k=0; k < mirror_path.segments.length; k++)
+ {
+	 if (k < path.segments.length) {
+	  mirror_path.segments[k].point.x = 2*mirror_x-path.segments[k].point.x;
+	  mirror_path.segments[k].point.y = path.segments[k].point.y;
+   }
+ }
+
+
+	count=count+1
+
+  // optional smoothing
+	path.smooth();
+//Console.log(p1);
+	}
+
+
+	}
+
+
+
+</script>
+</head>
+<body>
+
+	<center>
+		<div style="background-color:#EEEEDD;">
+	<p style="font-size:42px; font-family:Pacifico;">Grow a brain!</p>
+</div>
+	<canvas id="myCanvas" resize="true"></canvas>
+
+	<div class="slidecontainer" style="font-family:Raleway;">
+  ATR<input type="range" min="1" max="100" value="5" class="slider" id="myRange"
+	onchange="slider(this.value);">
+	NDI<input type="range" min="1" max="10" value="5" class="slider" id="myRange"
+	onchange="sliderDist(this.value);">
+	REP<input type="range" min="1" max="100" value="50" class="slider" id="myRange"
+	onchange="sliderHemi(this.value);">
+
+	<input id='colorpicker' onchange="setcol(this.value);" />
+
+	 <script>
+	 $("#colorpicker").spectrum({
+			 color: "#f00"
+	 });
+
+
+	 </script>
+</div>
+<div>
+	<button onclick="pause()">Pause</button>
+	<button onclick="res()">Reset</button>
+</div>
+<p>&nbsp;</p>
+<div>
+	<p style="font-size:24px; font-family:Pacifico;">About</p>
+	<p style="font-family:Raleway;">
+	<i>Grow a brain</i> is a generative simulation of randomly generated cells that
+	interact based on three simple rules:
+	<ol style="font-family:Raleway;">
+		<li>Neighboring cells stay at a preferred distance to each other (ATR=attraction rate, NDI=preferred distance)</li>
+		<li>Other cells are repulsed if too close (REP=repulsion)</li>
+		<li>All cells move outwards from the center</li>
+	</oi>
+</p>
+</div>
+
+<div style="width:50%; background-color:white;">
+<p>&nbsp;</p>
+	<p style="font-family:Raleway; font-size:12px;"><i>Grow a brain! </i> was written by Andreas Brandmaier and the source code is provided under the MIT license. All generated images are public domain (CC0) and can be used, shared, and modified without restrictions.
+	The code is powered by paper.js, jQuery, spectrum, and Google Fonts.</p>
+</div>
+</body>
+</html>
